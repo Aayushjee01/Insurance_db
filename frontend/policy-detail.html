@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Policy Details — InsureTrack</title>
+    <meta name="description" content="View detailed information about an insurance policy and its payment history." />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+    <header class="page-header">
+        <div class="container">
+            <nav>
+                <a href="index.html" class="nav-brand"><span class="icon">🛡️</span> InsureTrack</a>
+                <div class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="customers.html">Customers</a>
+                    <a href="policies.html" class="active">Policies</a>
+                    <a href="payments.html">Payments</a>
+                    <a href="dashboard.html">Dashboard</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+
+            <!-- Back -->
+            <a href="policies.html" class="btn btn-outline mb-3" style="display:inline-flex;">← Back to Policies</a>
+
+            <!-- Policy Info Card -->
+            <div id="loading-policy" class="spinner"></div>
+            <div id="policy-detail" style="display:none;">
+
+                <div class="card mb-3" id="policy-card">
+                    <div class="flex justify-between items-center flex-wrap gap-2 mb-2">
+                        <h1 class="page-title" id="detail-type">—</h1>
+                        <span id="detail-status"></span>
+                    </div>
+                    <div class="form-grid" style="gap:1rem;">
+                        <div>
+                            <div class="text-sm text-muted">Policy ID</div>
+                            <div style="font-weight:600;" id="detail-id">—</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">Customer</div>
+                            <div style="font-weight:600;" id="detail-customer">—</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">Phone</div>
+                            <div id="detail-phone">—</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">Address</div>
+                            <div id="detail-address">—</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">Start Date</div>
+                            <div id="detail-start">—</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">Duration</div>
+                            <div id="detail-duration">—</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">Coverage Amount</div>
+                            <div style="color:var(--accent); font-weight:700;" id="detail-coverage">—</div>
+                        </div>
+                        <div>
+                            <div class="text-sm text-muted">Premium per Cycle</div>
+                            <div style="color:var(--warning); font-weight:700;" id="detail-premium">—</div>
+                        </div>
+                    </div>
+
+                    <hr />
+
+                    <!-- Payment summary stats -->
+                    <div class="stat-grid" id="pay-stats">
+                        <div class="stat-card green">
+                            <div class="stat-icon">💰</div>
+                            <div>
+                                <div class="stat-label">Total Paid</div>
+                                <div class="stat-value" id="stat-paid">₹ 0</div>
+                            </div>
+                        </div>
+                        <div class="stat-card blue">
+                            <div class="stat-icon">🔢</div>
+                            <div>
+                                <div class="stat-label">Payments Made</div>
+                                <div class="stat-value" id="stat-count">0</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Payment History -->
+                <div class="flex justify-between items-center flex-wrap gap-2 mb-2">
+                    <h2 class="section-heading" style="flex:1;">💳 Payment History</h2>
+                    <a id="add-payment-btn" href="#" class="btn btn-primary">➕ Add Payment</a>
+                </div>
+
+                <div class="card" style="padding:0;">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#ID</th>
+                                    <th>Payment Date</th>
+                                    <th>Amount</th>
+                                    <th>Mode</th>
+                                    <th>Due Date</th>
+                                </tr>
+                            </thead>
+                            <tbody id="payment-tbody"></tbody>
+                        </table>
+                    </div>
+                    <div class="empty-state" id="pay-empty" style="display:none;">
+                        <div class="empty-icon">💳</div>
+                        <p>No payments recorded yet.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="empty-state" id="error-state" style="display:none;">
+                <div class="empty-icon">⚠️</div>
+                <p>Policy not found or an error occurred.</p>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+    <script src="js/api.js"></script>
+    <script>
+        const policyId = new URLSearchParams(window.location.search).get('id');
+
+        async function loadDetail() {
+            if (!policyId) { document.getElementById('error-state').style.display = 'block'; return; }
+
+            try {
+                // Load policy
+                const { data: p } = await api.get(`/policies/${policyId}`);
+                document.getElementById('loading-policy').style.display = 'none';
+                document.getElementById('policy-detail').style.display = 'block';
+
+                document.getElementById('detail-type').textContent = p.policy_type;
+                document.getElementById('detail-status').innerHTML = fmt.badge(p.policy_status);
+                document.getElementById('detail-id').textContent = `P${p.policy_id}`;
+                document.getElementById('detail-customer').textContent = p.customer_name;
+                document.getElementById('detail-phone').textContent = p.phone_number;
+                document.getElementById('detail-address').textContent = p.address;
+                document.getElementById('detail-start').textContent = fmt.date(p.start_date);
+                document.getElementById('detail-duration').textContent = `${p.policy_duration} months`;
+                document.getElementById('detail-coverage').textContent = fmt.currency(p.coverage_amount);
+                document.getElementById('detail-premium').textContent = fmt.currency(p.premium_amount);
+                document.getElementById('add-payment-btn').href = `payments.html?policy_id=${policyId}`;
+
+                // Load payments
+                const { data: payments, totals } = await api.get(`/payments/policy/${policyId}`);
+                document.getElementById('stat-paid').textContent = fmt.currency(totals.total_paid);
+                document.getElementById('stat-count').textContent = totals.payment_count;
+
+                const tbody = document.getElementById('payment-tbody');
+                if (!payments.length) {
+                    document.getElementById('pay-empty').style.display = 'block';
+                    return;
+                }
+                tbody.innerHTML = payments.map(pay => `
+        <tr>
+          <td><span style="color:var(--primary-light)">PMT${pay.payment_id}</span></td>
+          <td>${fmt.date(pay.payment_date)}</td>
+          <td style="color:var(--success); font-weight:600;">${fmt.currency(pay.payment_amount)}</td>
+          <td>${fmt.badge(pay.payment_mode)}</td>
+          <td style="color:${new Date(pay.due_date) < new Date(pay.payment_date) ? 'var(--danger)' : 'inherit'}">${fmt.date(pay.due_date)}</td>
+        </tr>
+      `).join('');
+            } catch (err) {
+                document.getElementById('loading-policy').style.display = 'none';
+                document.getElementById('error-state').style.display = 'block';
+                showToast('Failed to load policy details', 'error');
+            }
+        }
+
+        loadDetail();
+    </script>
+</body>
+
+</html>
