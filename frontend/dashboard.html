@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard — InsureTrack</title>
+    <meta name="description" content="Admin analytics dashboard for Insurance Policy Management System." />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+    <header class="page-header">
+        <div class="container">
+            <nav>
+                <a href="index.html" class="nav-brand"><span class="icon">🛡️</span> InsureTrack</a>
+                <div class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="customers.html">Customers</a>
+                    <a href="policies.html">Policies</a>
+                    <a href="payments.html">Payments</a>
+                    <a href="dashboard.html" class="active">Dashboard</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+
+            <h1 class="page-title mb-3">📊 Admin Dashboard</h1>
+
+            <!-- ===== KPI STATS ===== -->
+            <h2 class="section-heading">Key Metrics</h2>
+            <div class="stat-grid mb-3" id="stats-grid">
+                <div class="stat-card blue">
+                    <div class="stat-icon">👥</div>
+                    <div>
+                        <div class="stat-label">Total Customers</div>
+                        <div class="stat-value" id="stat-customers">—</div>
+                    </div>
+                </div>
+                <div class="stat-card cyan">
+                    <div class="stat-icon">📋</div>
+                    <div>
+                        <div class="stat-label">Total Policies</div>
+                        <div class="stat-value" id="stat-policies">—</div>
+                    </div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-icon">✅</div>
+                    <div>
+                        <div class="stat-label">Active Policies</div>
+                        <div class="stat-value" id="stat-active">—</div>
+                    </div>
+                </div>
+                <div class="stat-card amber">
+                    <div class="stat-icon">⏳</div>
+                    <div>
+                        <div class="stat-label">Pending</div>
+                        <div class="stat-value" id="stat-pending">—</div>
+                    </div>
+                </div>
+                <div class="stat-card red">
+                    <div class="stat-icon">❌</div>
+                    <div>
+                        <div class="stat-label">Expired</div>
+                        <div class="stat-value" id="stat-expired">—</div>
+                    </div>
+                </div>
+                <div class="stat-card green">
+                    <div class="stat-icon">💰</div>
+                    <div>
+                        <div class="stat-label">Total Collected</div>
+                        <div class="stat-value" id="stat-collected">—</div>
+                    </div>
+                </div>
+                <div class="stat-card blue">
+                    <div class="stat-icon">📅</div>
+                    <div>
+                        <div class="stat-label">Total Payments</div>
+                        <div class="stat-value" id="stat-payments">—</div>
+                    </div>
+                </div>
+                <div class="stat-card cyan">
+                    <div class="stat-icon">🏦</div>
+                    <div>
+                        <div class="stat-label">Total Coverage</div>
+                        <div class="stat-value" id="stat-coverage">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== PAYMENT BY MODE ===== -->
+            <h2 class="section-heading">Payments by Mode</h2>
+            <div id="mode-grid" class="stat-grid mb-3">
+                <div class="spinner"></div>
+            </div>
+
+            <!-- ===== CUSTOMER TABLE ===== -->
+            <h2 class="section-heading">Top Customers by Premium</h2>
+            <div class="card mb-3" style="padding:0;">
+                <div id="loading-cust" class="spinner"></div>
+                <div class="table-wrapper" id="cust-table-wrap" style="display:none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Customer</th>
+                                <th>Phone</th>
+                                <th>Policies</th>
+                                <th>Total Premium/Cycle</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cust-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- ===== RECENT PAYMENTS ===== -->
+            <h2 class="section-heading">Recent Payments</h2>
+            <div class="card" style="padding:0;">
+                <div id="loading-pay" class="spinner"></div>
+                <div class="table-wrapper" id="pay-table-wrap" style="display:none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#ID</th>
+                                <th>Customer</th>
+                                <th>Policy</th>
+                                <th>Amount</th>
+                                <th>Mode</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pay-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+    <script src="js/api.js"></script>
+    <script>
+        const modeColors = { Cash: 'cyan', Online: 'blue', Card: 'green', Cheque: 'amber' };
+        const modeIcons = { Cash: '💵', Online: '🌐', Card: '💳', Cheque: '📝' };
+
+        async function loadDashboard() {
+            try {
+                // Policy stats
+                const { data: pStats } = await api.get('/policies/stats');
+                document.getElementById('stat-policies').textContent = pStats.total_policies ?? 0;
+                document.getElementById('stat-active').textContent = pStats.active_policies ?? 0;
+                document.getElementById('stat-pending').textContent = pStats.pending_policies ?? 0;
+                document.getElementById('stat-expired').textContent = pStats.expired_policies ?? 0;
+                document.getElementById('stat-coverage').textContent = fmt.currency(pStats.total_coverage ?? 0);
+
+                // Payment stats
+                const { data: { stats: payStats, byMode } } = await api.get('/payments/stats');
+                document.getElementById('stat-payments').textContent = payStats.total_payments ?? 0;
+                document.getElementById('stat-collected').textContent = fmt.currency(payStats.total_collected ?? 0);
+
+                // Payment by mode cards
+                const modeGrid = document.getElementById('mode-grid');
+                if (byMode.length) {
+                    modeGrid.innerHTML = byMode.map(m => `
+          <div class="stat-card ${modeColors[m.payment_mode] || 'blue'}">
+            <div class="stat-icon">${modeIcons[m.payment_mode] || '💰'}</div>
+            <div>
+              <div class="stat-label">${m.payment_mode}</div>
+              <div class="stat-value" style="font-size:1.2rem;">${fmt.currency(m.amount)}</div>
+              <div class="text-sm text-muted">${m.count} transaction${m.count > 1 ? 's' : ''}</div>
+            </div>
+          </div>
+        `).join('');
+                } else {
+                    modeGrid.innerHTML = '<p class="text-muted text-sm">No payment data yet.</p>';
+                }
+            } catch (err) {
+                showToast('Failed to load stats', 'error');
+            }
+
+            // Customers
+            try {
+                const { data: customers } = await api.get('/customers');
+                document.getElementById('stat-customers').textContent = customers.length;
+                document.getElementById('loading-cust').style.display = 'none';
+                document.getElementById('cust-table-wrap').style.display = 'block';
+
+                const sorted = [...customers].sort((a, b) => b.total_premium - a.total_premium).slice(0, 10);
+                document.getElementById('cust-tbody').innerHTML = sorted.map((c, i) => `
+        <tr>
+          <td>${i + 1}</td>
+          <td><strong>${c.customer_name}</strong></td>
+          <td>${c.phone_number}</td>
+          <td><span style="color:var(--accent);">${c.total_policies}</span></td>
+          <td style="color:var(--warning);font-weight:600;">${fmt.currency(c.total_premium)}</td>
+        </tr>
+      `).join('');
+            } catch { }
+
+            // Recent payments
+            try {
+                const { data: payments } = await api.get('/payments');
+                document.getElementById('loading-pay').style.display = 'none';
+                document.getElementById('pay-table-wrap').style.display = 'block';
+
+                document.getElementById('pay-tbody').innerHTML = payments.slice(0, 10).map(p => `
+        <tr>
+          <td><span style="color:var(--primary-light)">PMT${p.payment_id}</span></td>
+          <td>${p.customer_name}</td>
+          <td>${p.policy_type}</td>
+          <td style="color:var(--success);font-weight:600;">${fmt.currency(p.payment_amount)}</td>
+          <td>${fmt.badge(p.payment_mode)}</td>
+          <td>${fmt.date(p.payment_date)}</td>
+        </tr>
+      `).join('');
+            } catch { }
+        }
+
+        loadDashboard();
+    </script>
+</body>
+
+</html>
