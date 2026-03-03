@@ -94,16 +94,18 @@ const PolicyModel = {
 
     // --- DASHBOARD aggregate stats ---
     async getStats() {
-        const [[stats]] = await db.execute(`
+        const sql = `
       SELECT
+        (SELECT COUNT(*) FROM Customer)           AS total_customers,
         COUNT(*)                                AS total_policies,
-        SUM(policy_status = 'Active')           AS active_policies,
-        SUM(policy_status = 'Expired')          AS expired_policies,
-        SUM(policy_status = 'Pending')          AS pending_policies,
+        COALESCE(SUM(policy_status = 'Active'), 0)  AS active_policies,
+        COALESCE(SUM(policy_status = 'Expired'), 0) AS expired_policies,
+        COALESCE(SUM(policy_status = 'Pending'), 0) AS pending_policies,
         COALESCE(SUM(coverage_amount), 0)       AS total_coverage,
         COALESCE(SUM(premium_amount), 0)        AS total_premium_per_cycle
       FROM Policy
-    `);
+    `;
+        const [[stats]] = await db.execute(sql);
         return stats;
     },
 };
