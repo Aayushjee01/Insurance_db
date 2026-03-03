@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InsureTrack — Insurance Policy Management System</title>
+  <meta name="description" content="A modern insurance policy management system to manage customers, policies, and premium payments efficiently." />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<!-- ===== NAVBAR ===== -->
+<header class="page-header">
+  <div class="container">
+    <nav>
+      <a href="index.html" class="nav-brand">
+        <span class="icon">🛡️</span> InsureTrack
+      </a>
+      <div class="nav-links">
+        <a href="index.html"       class="active">Home</a>
+        <a href="customers.html">Customers</a>
+        <a href="policies.html">Policies</a>
+        <a href="payments.html">Payments</a>
+        <a href="dashboard.html">Dashboard</a>
+      </div>
+    </nav>
+  </div>
+</header>
+
+<!-- ===== HERO ===== -->
+<main>
+  <section class="hero">
+    <div class="container">
+      <div class="hero-content">
+        <div class="hero-tag">🚀 Insurance Management Platform</div>
+        <h1 class="hero-title">
+          Manage Policies<br />
+          <span>Smarter &amp; Faster</span>
+        </h1>
+        <p class="hero-desc">
+          InsureTrack is a full-stack insurance policy management system that lets
+          you register customers, create policies, record premium payments, and
+          analyse data — all in one place.
+        </p>
+        <div class="hero-actions">
+          <a href="customers.html" class="btn btn-primary">👤 Manage Customers</a>
+          <a href="dashboard.html" class="btn btn-outline">📊 View Dashboard</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== FEATURE CARDS ===== -->
+  <section class="container" style="padding-bottom:4rem;">
+    <h2 class="section-heading" style="font-size:1.5rem;">What You Can Do</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="icon">👤</div>
+        <h3>Customer Management</h3>
+        <p>Register customers, search by name or phone, and track all linked policies.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📋</div>
+        <h3>Policy Creation</h3>
+        <p>Create Life, Health, Vehicle, and Term insurance policies with coverage details.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">💳</div>
+        <h3>Premium Payments</h3>
+        <p>Record payments via Cash, Online, Card, or Cheque and view complete history.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">📊</div>
+        <h3>Admin Dashboard</h3>
+        <p>View aggregate stats — total collected, policy counts, active/expired breakdown.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🔍</div>
+        <h3>Search &amp; Filter</h3>
+        <p>Search customers, filter policies by status, premium range, payment mode, and date.</p>
+      </div>
+      <div class="feature-card">
+        <div class="icon">🗄️</div>
+        <h3>Relational Data</h3>
+        <p>Full JOIN queries — one customer → many policies → many payments, all linked.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+</body>
+</html>
