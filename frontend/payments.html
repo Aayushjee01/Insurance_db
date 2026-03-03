@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Payments — InsureTrack</title>
+    <meta name="description" content="Record and view premium payments for insurance policies." />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+    <header class="page-header">
+        <div class="container">
+            <nav>
+                <a href="index.html" class="nav-brand"><span class="icon">🛡️</span> InsureTrack</a>
+                <div class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="customers.html">Customers</a>
+                    <a href="policies.html">Policies</a>
+                    <a href="payments.html" class="active">Payments</a>
+                    <a href="dashboard.html">Dashboard</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+
+            <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+                <h1 class="page-title">💳 Premium Payments</h1>
+                <button class="btn btn-primary" id="btn-toggle-form">➕ Record Payment</button>
+            </div>
+
+            <!-- Payment Form -->
+            <div class="card mb-3" id="form-card" style="display:none;">
+                <h2 class="section-heading">Record Premium Payment</h2>
+                <form id="payment-form" novalidate>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="pay-policy">Policy *</label>
+                            <select id="pay-policy">
+                                <option value="">— Select policy —</option>
+                            </select>
+                            <span class="field-error" id="err-policy"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pay-amount">Payment Amount (₹) *</label>
+                            <input type="number" id="pay-amount" placeholder="e.g. 5000" min="1" />
+                            <span class="field-error" id="err-amount"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pay-mode">Payment Mode *</label>
+                            <select id="pay-mode">
+                                <option value="">— Select mode —</option>
+                                <option value="Cash">Cash</option>
+                                <option value="Online">Online</option>
+                                <option value="Card">Card</option>
+                                <option value="Cheque">Cheque</option>
+                            </select>
+                            <span class="field-error" id="err-mode"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pay-date">Payment Date *</label>
+                            <input type="date" id="pay-date" />
+                            <span class="field-error" id="err-date"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pay-due">Due Date *</label>
+                            <input type="date" id="pay-due" />
+                            <span class="field-error" id="err-due"></span>
+                        </div>
+                    </div>
+                    <div style="margin-top:1.25rem; display:flex; gap:.75rem; flex-wrap:wrap;">
+                        <button type="submit" class="btn btn-success">💾 Record Payment</button>
+                        <button type="button" class="btn btn-outline" id="cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <input type="text" id="search-input" placeholder="🔍  Search by customer or policy type…" />
+                <select id="filter-mode">
+                    <option value="">All Modes</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Online">Online</option>
+                    <option value="Card">Card</option>
+                    <option value="Cheque">Cheque</option>
+                </select>
+                <input type="date" id="filter-start" title="From date" />
+                <input type="date" id="filter-end" title="To date" />
+                <button class="btn btn-outline" id="btn-search">Filter</button>
+            </div>
+
+            <!-- Table -->
+            <div class="card" style="padding:0;">
+                <div id="loading" class="spinner"></div>
+                <div class="table-wrapper" id="table-wrap" style="display:none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#ID</th>
+                                <th>Customer</th>
+                                <th>Policy</th>
+                                <th>Status</th>
+                                <th>Amount</th>
+                                <th>Mode</th>
+                                <th>Payment Date</th>
+                                <th>Due Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="payment-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="empty-state" id="empty-state" style="display:none;">
+                    <div class="empty-icon">💳</div>
+                    <p>No payments found.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+    <script src="js/api.js"></script>
+    <script>
+        const formCard = document.getElementById('form-card');
+        const tbody = document.getElementById('payment-tbody');
+        const loading = document.getElementById('loading');
+        const tableWrap = document.getElementById('table-wrap');
+        const emptyEl = document.getElementById('empty-state');
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const prefillPolicy = urlParams.get('policy_id');
+
+        document.getElementById('btn-toggle-form').addEventListener('click', () => {
+            formCard.style.display = formCard.style.display === 'none' ? 'block' : 'none';
+        });
+        document.getElementById('cancel-btn').addEventListener('click', () => {
+            formCard.style.display = 'none';
+        });
+
+        // Load policies into dropdown
+        async function loadPolicyOptions() {
+            try {
+                const { data } = await api.get('/policies');
+                const sel = document.getElementById('pay-policy');
+                data.forEach(p => {
+                    const opt = document.createElement('option');
+                    opt.value = p.policy_id;
+                    opt.textContent = `P${p.policy_id} — ${p.policy_type} (${p.customer_name})`;
+                    sel.appendChild(opt);
+                });
+                if (prefillPolicy) {
+                    sel.value = prefillPolicy;
+                    formCard.style.display = 'block';
+                    // Set today as default dates
+                    const today = new Date().toISOString().split('T')[0];
+                    document.getElementById('pay-date').value = today;
+                }
+            } catch { }
+        }
+
+        // Validation
+        function validate() {
+            let ok = true;
+            const setErr = (id, msg) => { document.getElementById(id).textContent = msg; ok = false; };
+            ['err-policy', 'err-amount', 'err-mode', 'err-date', 'err-due']
+                .forEach(id => { document.getElementById(id).textContent = ''; });
+
+            if (!document.getElementById('pay-policy').value) setErr('err-policy', 'Select a policy');
+            const amt = parseFloat(document.getElementById('pay-amount').value);
+            if (isNaN(amt) || amt < 1) setErr('err-amount', 'Enter a valid amount (> 0)');
+            if (!document.getElementById('pay-mode').value) setErr('err-mode', 'Select a payment mode');
+            if (!document.getElementById('pay-date').value) setErr('err-date', 'Payment date is required');
+            if (!document.getElementById('pay-due').value) setErr('err-due', 'Due date is required');
+            return ok;
+        }
+
+        document.getElementById('payment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!validate()) return;
+            const btn = e.target.querySelector('button[type=submit]');
+            btn.disabled = true;
+            try {
+                await api.post('/payments', {
+                    policy_id: document.getElementById('pay-policy').value,
+                    payment_amount: document.getElementById('pay-amount').value,
+                    payment_mode: document.getElementById('pay-mode').value,
+                    payment_date: document.getElementById('pay-date').value,
+                    due_date: document.getElementById('pay-due').value,
+                });
+                showToast('Payment recorded successfully', 'success');
+                formCard.style.display = 'none';
+                document.getElementById('payment-form').reset();
+                loadPayments();
+            } catch (err) { showToast(err.message, 'error'); }
+            finally { btn.disabled = false; }
+        });
+
+        async function loadPayments() {
+            loading.style.display = 'block';
+            tableWrap.style.display = 'none';
+            emptyEl.style.display = 'none';
+
+            const search = document.getElementById('search-input').value.trim();
+            const mode = document.getElementById('filter-mode').value;
+            const start = document.getElementById('filter-start').value;
+            const end = document.getElementById('filter-end').value;
+
+            let url = `/payments?search=${encodeURIComponent(search)}&mode=${mode}`;
+            if (start && end) url += `&startDate=${start}&endDate=${end}`;
+
+            try {
+                const { data } = await api.get(url);
+                loading.style.display = 'none';
+                if (!data.length) { emptyEl.style.display = 'block'; return; }
+                tableWrap.style.display = 'block';
+
+                tbody.innerHTML = data.map(p => {
+                    const late = new Date(p.due_date) < new Date(p.payment_date);
+                    return `
+          <tr>
+            <td><span style="color:var(--primary-light)">PMT${p.payment_id}</span></td>
+            <td>${p.customer_name}</td>
+            <td>${p.policy_type}</td>
+            <td>${fmt.badge(p.policy_status)}</td>
+            <td style="color:var(--success);font-weight:600;">${fmt.currency(p.payment_amount)}</td>
+            <td>${fmt.badge(p.payment_mode)}</td>
+            <td>${fmt.date(p.payment_date)}</td>
+            <td style="color:${late ? 'var(--danger)' : 'inherit'}">${fmt.date(p.due_date)}${late ? ' ⚠️' : ''}</td>
+          </tr>`;
+                }).join('');
+            } catch (err) {
+                loading.style.display = 'none';
+                showToast('Failed to load payments', 'error');
+            }
+        }
+
+        document.getElementById('btn-search').addEventListener('click', loadPayments);
+        document.getElementById('search-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') loadPayments();
+        });
+
+        loadPolicyOptions();
+        loadPayments();
+    </script>
+</body>
+
+</html>
