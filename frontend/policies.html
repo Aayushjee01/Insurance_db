@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Policies — InsureTrack</title>
+    <meta name="description" content="Create and manage insurance policies." />
+    <link rel="stylesheet" href="css/style.css" />
+</head>
+
+<body>
+
+    <header class="page-header">
+        <div class="container">
+            <nav>
+                <a href="index.html" class="nav-brand"><span class="icon">🛡️</span> InsureTrack</a>
+                <div class="nav-links">
+                    <a href="index.html">Home</a>
+                    <a href="customers.html">Customers</a>
+                    <a href="policies.html" class="active">Policies</a>
+                    <a href="payments.html">Payments</a>
+                    <a href="dashboard.html">Dashboard</a>
+                </div>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div class="container">
+
+            <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+                <h1 class="page-title">📋 Policies</h1>
+                <button class="btn btn-primary" id="btn-toggle-form">➕ New Policy</button>
+            </div>
+
+            <!-- Policy Form -->
+            <div class="card mb-3" id="form-card" style="display:none;">
+                <h2 class="section-heading">Create Insurance Policy</h2>
+                <form id="policy-form" novalidate>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="pol-customer">Customer *</label>
+                            <select id="pol-customer">
+                                <option value="">— Select customer —</option>
+                            </select>
+                            <span class="field-error" id="err-customer"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pol-type">Policy Type *</label>
+                            <select id="pol-type">
+                                <option value="">— Select type —</option>
+                                <option>Life Insurance</option>
+                                <option>Health Insurance</option>
+                                <option>Vehicle Insurance</option>
+                                <option>Term Insurance</option>
+                                <option>Home Insurance</option>
+                            </select>
+                            <span class="field-error" id="err-type"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pol-duration">Duration (months) *</label>
+                            <input type="number" id="pol-duration" placeholder="e.g. 12" min="1" />
+                            <span class="field-error" id="err-duration"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pol-status">Status *</label>
+                            <select id="pol-status">
+                                <option value="Active">Active</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Expired">Expired</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="pol-coverage">Coverage Amount (₹) *</label>
+                            <input type="number" id="pol-coverage" placeholder="e.g. 500000" min="1" />
+                            <span class="field-error" id="err-coverage"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pol-premium">Premium Amount (₹) *</label>
+                            <input type="number" id="pol-premium" placeholder="e.g. 5000" min="1" />
+                            <span class="field-error" id="err-premium"></span>
+                        </div>
+                        <div class="form-group">
+                            <label for="pol-start">Start Date *</label>
+                            <input type="date" id="pol-start" />
+                            <span class="field-error" id="err-start"></span>
+                        </div>
+                    </div>
+                    <div style="margin-top:1.25rem; display:flex; gap:.75rem; flex-wrap:wrap;">
+                        <button type="submit" class="btn btn-success">💾 Create Policy</button>
+                        <button type="button" class="btn btn-outline" id="cancel-btn">Cancel</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Filter Bar -->
+            <div class="filter-bar">
+                <input type="text" id="search-input" placeholder="🔍  Search by type or customer…" />
+                <select id="filter-status">
+                    <option value="">All Statuses</option>
+                    <option value="Active">Active</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Expired">Expired</option>
+                </select>
+                <input type="number" id="filter-min" placeholder="Min premium ₹" />
+                <input type="number" id="filter-max" placeholder="Max premium ₹" />
+                <button class="btn btn-outline" id="btn-search">Filter</button>
+            </div>
+
+            <!-- Table -->
+            <div class="card" style="padding:0;">
+                <div id="loading" class="spinner"></div>
+                <div class="table-wrapper" id="table-wrap" style="display:none;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#ID</th>
+                                <th>Type</th>
+                                <th>Customer</th>
+                                <th>Duration</th>
+                                <th>Status</th>
+                                <th>Coverage</th>
+                                <th>Premium</th>
+                                <th>Start Date</th>
+                                <th>Paid</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="policy-tbody"></tbody>
+                    </table>
+                </div>
+                <div class="empty-state" id="empty-state" style="display:none;">
+                    <div class="empty-icon">📋</div>
+                    <p>No policies found.</p>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="toast-container"></div>
+    <script src="js/api.js"></script>
+    <script>
+        const formCard = document.getElementById('form-card');
+        const tbody = document.getElementById('policy-tbody');
+        const loading = document.getElementById('loading');
+        const tableWrap = document.getElementById('table-wrap');
+        const emptyEl = document.getElementById('empty-state');
+
+        // Pre-fill customer from URL param
+        const urlParams = new URLSearchParams(window.location.search);
+        const prefillCustomer = urlParams.get('customer_id');
+
+        document.getElementById('btn-toggle-form').addEventListener('click', () => {
+            formCard.style.display = formCard.style.display === 'none' ? 'block' : 'none';
+        });
+        document.getElementById('cancel-btn').addEventListener('click', () => {
+            formCard.style.display = 'none';
+        });
+
+        // Load customers into select
+        async function loadCustomerOptions() {
+            try {
+                const { data } = await api.get('/customers');
+                const sel = document.getElementById('pol-customer');
+                data.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.customer_id;
+                    opt.textContent = `C${c.customer_id} — ${c.customer_name}`;
+                    sel.appendChild(opt);
+                });
+                if (prefillCustomer) {
+                    sel.value = prefillCustomer;
+                    formCard.style.display = 'block';
+                }
+            } catch { }
+        }
+
+        // Validation
+        function validate() {
+            let ok = true;
+            const setErr = (id, msg) => {
+                document.getElementById(id).textContent = msg;
+                ok = false;
+            };
+            ['err-customer', 'err-type', 'err-duration', 'err-coverage', 'err-premium', 'err-start']
+                .forEach(id => { document.getElementById(id).textContent = ''; });
+
+            if (!document.getElementById('pol-customer').value) setErr('err-customer', 'Select a customer');
+            if (!document.getElementById('pol-type').value) setErr('err-type', 'Select policy type');
+            const dur = parseInt(document.getElementById('pol-duration').value);
+            if (isNaN(dur) || dur < 1) setErr('err-duration', 'Enter a valid duration (≥ 1)');
+            const cov = parseFloat(document.getElementById('pol-coverage').value);
+            if (isNaN(cov) || cov < 1) setErr('err-coverage', 'Coverage must be > 0');
+            const prem = parseFloat(document.getElementById('pol-premium').value);
+            if (isNaN(prem) || prem < 1) setErr('err-premium', 'Premium must be > 0');
+            if (!document.getElementById('pol-start').value) setErr('err-start', 'Start date is required');
+            return ok;
+        }
+
+        document.getElementById('policy-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!validate()) return;
+            const btn = e.target.querySelector('button[type=submit]');
+            btn.disabled = true;
+            try {
+                await api.post('/policies', {
+                    policy_type: document.getElementById('pol-type').value,
+                    policy_duration: document.getElementById('pol-duration').value,
+                    policy_status: document.getElementById('pol-status').value,
+                    coverage_amount: document.getElementById('pol-coverage').value,
+                    premium_amount: document.getElementById('pol-premium').value,
+                    start_date: document.getElementById('pol-start').value,
+                    customer_id: document.getElementById('pol-customer').value,
+                });
+                showToast('Policy created successfully', 'success');
+                formCard.style.display = 'none';
+                document.getElementById('policy-form').reset();
+                loadPolicies();
+            } catch (err) { showToast(err.message, 'error'); }
+            finally { btn.disabled = false; }
+        });
+
+        async function loadPolicies() {
+            loading.style.display = 'block';
+            tableWrap.style.display = 'none';
+            emptyEl.style.display = 'none';
+
+            const search = document.getElementById('search-input').value.trim();
+            const status = document.getElementById('filter-status').value;
+            const min = document.getElementById('filter-min').value;
+            const max = document.getElementById('filter-max').value;
+
+            let url = `/policies?search=${encodeURIComponent(search)}&status=${status}`;
+            if (min && max) url += `&minPremium=${min}&maxPremium=${max}`;
+
+            try {
+                const { data } = await api.get(url);
+                loading.style.display = 'none';
+                if (!data.length) { emptyEl.style.display = 'block'; return; }
+                tableWrap.style.display = 'block';
+
+                tbody.innerHTML = data.map(p => `
+        <tr>
+          <td><span style="color:var(--primary-light);font-weight:600;">P${p.policy_id}</span></td>
+          <td><strong>${p.policy_type}</strong></td>
+          <td>${p.customer_name}</td>
+          <td>${p.policy_duration} mo</td>
+          <td>${fmt.badge(p.policy_status)}</td>
+          <td>${fmt.currency(p.coverage_amount)}</td>
+          <td>${fmt.currency(p.premium_amount)}</td>
+          <td>${fmt.date(p.start_date)}</td>
+          <td style="color:var(--success);">${fmt.currency(p.total_paid)}</td>
+          <td>
+            <div class="flex gap-2">
+              <a href="policy-detail.html?id=${p.policy_id}" class="btn btn-outline btn-sm">👁️</a>
+              <a href="payments.html?policy_id=${p.policy_id}" class="btn btn-outline btn-sm">💳</a>
+              <button class="btn btn-danger btn-sm" onclick="deletePolicy(${p.policy_id})">🗑️</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+            } catch (err) {
+                loading.style.display = 'none';
+                showToast('Failed to load policies', 'error');
+            }
+        }
+
+        async function deletePolicy(id) {
+            if (!confirm('Delete this policy and all its payments?')) return;
+            try {
+                await api.delete(`/policies/${id}`);
+                showToast('Policy deleted', 'success');
+                loadPolicies();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        document.getElementById('btn-search').addEventListener('click', loadPolicies);
+        document.getElementById('search-input').addEventListener('keydown', e => {
+            if (e.key === 'Enter') loadPolicies();
+        });
+
+        loadCustomerOptions();
+        loadPolicies();
+    </script>
+</body>
+
+</html>
